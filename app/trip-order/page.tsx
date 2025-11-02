@@ -6,9 +6,12 @@ import { ArrowLeftIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import JourneyInfo from './components/journey-info';
 import MapContainer from './components/map-container';
 import RouteControls from './components/route-controls';
-import UMKMModal from './components/umkm-modal';
+import { UMKMSection } from './components/umkm-list';
+import RoutePointsList from './components/route-points-list';
+import LocationDetails from './components/location-details';
 
 interface RoutePoint {
+    id: string;
     lat: number;
     lng: number;
     name: string;
@@ -18,12 +21,8 @@ interface RoutePoint {
     umkm: UMKM[];
 }
 
-interface UMKM {
-    name: string;
-    type: string;
-    rating: number;
-    distance: string;
-}
+// Import tipe UMKM dari umkm-list
+import type { UMKM } from './components/umkm-list';
 
 // UMKM Detail Data
 const getUMKMDetail = (umkmName: string, type: string) => {
@@ -217,6 +216,7 @@ export default function TripOrderPage() {
 
     const routePoints: RoutePoint[] = [
         {
+            id: 'yogyakarta',
             lat: -7.7956,
             lng: 110.3695,
             name: 'Yogyakarta',
@@ -230,6 +230,7 @@ export default function TripOrderPage() {
             ]
         },
         {
+            id: 'borobudur',
             lat: -7.6175,
             lng: 110.2037,
             name: 'Borobudur Temple',
@@ -243,6 +244,7 @@ export default function TripOrderPage() {
             ]
         },
         {
+            id: 'yogyakarta-departure',
             lat: -7.7956,
             lng: 110.3695,
             name: 'Yogyakarta (Departure)',
@@ -252,6 +254,7 @@ export default function TripOrderPage() {
             umkm: []
         },
         {
+            id: 'malang',
             lat: -7.8014,
             lng: 112.0178,
             name: 'Malang',
@@ -265,6 +268,7 @@ export default function TripOrderPage() {
             ]
         },
         {
+            id: 'banyuwangi',
             lat: -8.1132,
             lng: 114.2421,
             name: 'Banyuwangi',
@@ -278,6 +282,7 @@ export default function TripOrderPage() {
             ]
         },
         {
+            id: 'denpasar',
             lat: -8.3405,
             lng: 115.0920,
             name: 'Denpasar',
@@ -291,6 +296,7 @@ export default function TripOrderPage() {
             ]
         },
         {
+            id: 'sanur-beach',
             lat: -8.4095,
             lng: 115.1889,
             name: 'Sanur Beach',
@@ -304,6 +310,7 @@ export default function TripOrderPage() {
             ]
         },
         {
+            id: 'garuda-wisnu-kencana',
             lat: -8.8111,
             lng: 115.1628,
             name: 'Garuda Wisnu Kencana',
@@ -320,7 +327,6 @@ export default function TripOrderPage() {
 
     // Load Leaflet CSS on client side
     useEffect(() => {
-        // Add Leaflet CSS dynamically
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
@@ -329,7 +335,6 @@ export default function TripOrderPage() {
         document.head.appendChild(link);
 
         return () => {
-            // Cleanup on unmount
             const existingLink = document.querySelector('link[href*="leaflet.css"]');
             if (existingLink) {
                 document.head.removeChild(existingLink);
@@ -354,18 +359,19 @@ export default function TripOrderPage() {
                 });
 
                 // Add markers for each point
-                routePoints.forEach((point, index) => {
-                    const marker = L.marker([point.lat, point.lng]).addTo(map);
-                    if (index === currentPointIndex) {
-                        // Highlight current point
-                        const icon = L.divIcon({
-                            className: 'current-location-marker',
-                            html: '📍',
-                            iconSize: [30, 30],
-                            iconAnchor: [15, 30],
-                        });
-                        marker.setIcon(icon);
-                    }
+                routePoints.forEach((point) => {
+                    const marker = L.marker([point.lat, point.lng], {
+                        icon: L.icon({
+                            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                            iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+                            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34],
+                        })
+                    }).addTo(map);
+
+                    marker.bindPopup(`<b>${point.name}</b><br>${point.time}`);
                 });
 
                 // Add polyline for the route
@@ -403,7 +409,7 @@ export default function TripOrderPage() {
                     }
                     return nextIndex;
                 });
-            }, 2000); // Move to next point every 2 seconds
+            }, 2000);
         }
 
         return () => {
@@ -411,31 +417,25 @@ export default function TripOrderPage() {
         };
     }, [isPlaying, currentPointIndex]);
 
-    // Toggle play/pause
     const togglePlayPause = () => {
         setIsPlaying(!isPlaying);
     };
 
-    // Toggle mute
     const toggleMute = () => {
         setIsMuted(!isMuted);
     };
 
-    // Go to next point
     const goToNext = () => {
         setCurrentPointIndex(prev =>
             prev < routePoints.length - 1 ? prev + 1 : prev
         );
     };
 
-    // Go to previous point
     const goToPrevious = () => {
         setCurrentPointIndex(prev =>
             prev > 0 ? prev - 1 : prev
         );
     };
-
-
 
     const handlePointClick = async (index: number, point: RoutePoint) => {
         setCurrentPointIndex(index);
@@ -469,250 +469,158 @@ export default function TripOrderPage() {
     const totalPoints = routePoints.length;
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen relative">
+            {/* Decorative elements */}
+            <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute -top-20 -right-20 w-64 h-64 bg-blue-100 rounded-full mix-blend-multiply filter blur-xl opacity-30"></div>
+                <div className="absolute -bottom-40 -left-20 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30"></div>
+            </div>
             {/* Header */}
-            <div className="bg-white shadow-sm border-b">
+            <div className="bg-white/90 backdrop-blur-md shadow-sm border-b border-blue-100/50 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         <div className="flex items-center space-x-4">
-                            <Link href="/" className="flex items-center text-slate-600 hover:text-slate-900 transition-colors">
+                            <Link href="/" className="flex items-center text-slate-600 hover:text-teal-700 transition-all duration-200 hover:scale-105">
                                 <ArrowLeftIcon className="h-5 w-5 mr-2" />
                                 Kembali
                             </Link>
-                            <div className="h-6 w-px bg-slate-300"></div>
-                            <h1 className="text-xl font-semibold text-slate-900">Demo Live Tracking</h1>
+                            <div className="h-6 w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent"></div>
+                            <h1 className="text-xl font-semibold text-blue-900">
+                                <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                                    Demo Live Tracking
+                                </span>
+                            </h1>
                         </div>
                         <div className="flex items-center space-x-2">
-                            <div className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-medium">
-                                Live Demo
+                            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 group">
+                                <div className="flex items-center">
+                                    <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
+                                    <span>Live Demo</span>
+                                    <svg className="w-4 h-4 ml-1.5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                                    </svg>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Top Section: Map + Right Panel */}
-                <div className="grid lg:grid-cols-3 gap-8 mb-8">
-                    {/* Map Section */}
-                    <div className="lg:col-span-2">
-                        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-                            <div className="p-6 border-b">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h2 className="text-xl font-semibold text-slate-900 mb-1">Rute Perjalanan</h2>
-                                        <p className="text-slate-600">Yogyakarta → Bali (via Tourist Spots)</p>
-                                    </div>
-                                    <div className="flex items-center space-x-3">
-                                        <RouteControls
-                                            isPlaying={isPlaying}
-                                            onPlayPause={togglePlayPause}
-                                            onNext={goToNext}
-                                            onPrevious={goToPrevious}
-                                            isMuted={isMuted}
-                                            onToggleMute={toggleMute}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="relative h-[600px] w-full">
-                                <MapContainer
-                                    ref={mapRef}
-                                    center={[currentPoint.lat, currentPoint.lng]}
-                                    zoom={12}
-                                    onMapLoad={(map) => {
-                                        mapRef.current = map;
-                                    }}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right Panel: Trip Info + Route Points */}
-                    <div className="space-y-6">
-                        {/* Journey Info */}
-                        <JourneyInfo
-                            estimatedArrival={estimatedArrival}
-                            currentProgress={currentPointIndex + 1}
-                            totalPoints={totalPoints}
-                            currentLocation={{
-                                name: currentPoint?.name || '',
-                                description: currentPoint?.description || '',
-                                image: getLocationImage(currentPoint?.name || ''),
-                                time: currentPoint?.time || '',
-                                attractions: currentPoint?.attractions || [],
-                                history: getLocationHistory(currentPoint?.name || ''),
-                                activities: getLocationActivities(currentPoint?.name || ''),
-                                coordinates: [currentPoint?.lat || 0, currentPoint?.lng || 0]
-                            }}
-                        />
-
-                        {/* Route Points */}
-                        <div className="bg-white rounded-2xl shadow-sm border p-6">
-                            <h3 className="text-lg font-semibold text-slate-900 mb-4">Titik Perjalanan</h3>
-
-                            <div className="space-y-3">
-                                {routePoints.map((point, index) => (
-                                    <div
-                                        key={index}
-                                        onClick={() => handlePointClick(index, point)}
-                                        className={`flex items-center space-x-3 p-3 rounded-lg transition-colors cursor-pointer hover:bg-slate-100 ${index === currentPointIndex
-                                            ? 'bg-emerald-50 border border-emerald-200'
-                                            : index < currentPointIndex
-                                                ? 'bg-slate-50'
-                                                : 'bg-white'
-                                            }`}
-                                    >
-                                        <div className={`w-3 h-3 rounded-full ${index === currentPointIndex
-                                            ? 'bg-emerald-500 animate-pulse'
-                                            : index < currentPointIndex
-                                                ? 'bg-slate-400'
-                                                : 'bg-slate-200'
-                                            }`}></div>
-                                        <div className="flex-1">
-                                            <p className={`font-medium ${index === currentPointIndex ? 'text-emerald-900' : 'text-slate-900'
-                                                }`}>
-                                                {point.name}
-                                            </p>
-                                            <p className="text-sm text-slate-600">{point.time} WIB</p>
-                                        </div>
-                                        {index === currentPointIndex && (
-                                            <div className="text-emerald-600 text-sm font-medium">Saat ini</div>
-                                        )}
-                                        {index < currentPointIndex && (
-                                            <div className="text-slate-400 text-sm">✓</div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Bottom Section: Detail Lokasi + UMKM */}
-                <div className="grid lg:grid-cols-2 gap-8">
-                    {/* Location Details */}
-                    <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-                        <div className="p-6">
-                            <h3 className="text-lg font-semibold text-slate-900 mb-4">Detail Lokasi</h3>
-                        </div>
-
-                        {/* Location Image */}
-                        <div className="relative h-64 w-full bg-gray-200">
-                            <img
-                                src={getLocationImage(currentPoint?.name || '')}
-                                alt={currentPoint?.name || ''}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.src = 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=250&fit=crop&auto=format';
-                                }}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                            <div className="absolute bottom-4 left-6 text-white">
-                                <h4 className="text-xl font-bold mb-1">{currentPoint?.name}</h4>
-                                <p className="text-sm opacity-90">{currentPoint?.description}</p>
-                            </div>
-                        </div>
-
-                        <div className="p-6 space-y-6">
-                            {/* History */}
+            {/* Main Layout - Simple & Clean */}
+            <div className="max-w-7xl mx-auto">
+                {/* Top Controls Bar */}
+                <div className="sticky top-16 z-40 bg-white/98 backdrop-blur-md border-b border-blue-100/70 shadow-sm px-6 py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="md:col-span-2 space-y-6">
+                            {/* Glass effect overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/70 to-blue-100/40 rounded-3xl m-4 -z-10 border border-blue-100/50"></div>
                             <div>
-                                <h5 className="text-sm font-semibold text-slate-900 mb-2">Sejarah</h5>
-                                <p className="text-sm text-slate-600 leading-relaxed">
-                                    {getLocationHistory(currentPoint?.name || '')}
+                                <h2 className="text-lg font-semibold text-slate-900">
+                                    {currentPoint?.name}
+                                </h2>
+                                <p className="text-sm text-slate-600">
+                                    Titik {currentPointIndex + 1} dari {totalPoints} • {currentPoint?.time}
                                 </p>
                             </div>
-
-                            {/* Attractions */}
-                            {currentPoint?.attractions && currentPoint.attractions.length > 0 && (
-                                <div>
-                                    <h5 className="text-sm font-semibold text-slate-900 mb-2">Tempat Wisata</h5>
-                                    <div className="flex flex-wrap gap-2">
-                                        {currentPoint.attractions.map((attraction, idx) => (
-                                            <span
-                                                key={idx}
-                                                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800"
-                                            >
-                                                {attraction}
-                                            </span>
-                                        ))}
+                            
+                            {/* Progress Bar */}
+                            <div className="flex-1 max-w-md">
+                                <div className="flex items-center space-x-2">
+                                    <div className="flex-1 bg-slate-200 rounded-full h-2">
+                                        <div 
+                                            className="bg-gradient-to-r from-teal-500 to-teal-600 h-2 rounded-full transition-all duration-500"
+                                            style={{ width: `${((currentPointIndex + 1) / totalPoints) * 100}%` }}
+                                        ></div>
                                     </div>
-                                </div>
-                            )}
-
-                            {/* Activities */}
-                            <div>
-                                <h5 className="text-sm font-semibold text-slate-900 mb-2">Aktivitas</h5>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {getLocationActivities(currentPoint?.name || '').map((activity, idx) => (
-                                        <div
-                                            key={idx}
-                                            className="flex items-center p-2 bg-slate-50 rounded-lg border border-slate-200"
-                                        >
-                                            <div className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></div>
-                                            <span className="text-xs text-slate-700">{activity}</span>
-                                        </div>
-                                    ))}
+                                    <span className="text-xs text-slate-500 font-medium">
+                                        {Math.round(((currentPointIndex + 1) / totalPoints) * 100)}%
+                                    </span>
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Visit Time */}
-                            <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-                                <span className="text-sm font-medium text-slate-900">Waktu Kunjungan</span>
-                                <span className="text-sm text-emerald-700 font-medium">{currentPoint?.time} WIB</span>
-                            </div>
+                        <RouteControls
+                            isPlaying={isPlaying}
+                            onPlayPause={togglePlayPause}
+                            onNext={goToNext}
+                            onPrevious={goToPrevious}
+                            isMuted={isMuted}
+                            onToggleMute={toggleMute}
+                        />
+                    </div>
+                </div>
+
+                {/* Content Area - Natural Scroll */}
+                <div className="px-6 pb-8 space-y-6 relative z-10">
+                    {/* Map Section */}
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-blue-100 overflow-hidden hover:shadow-md transition-all duration-300 hover:border-blue-200">
+                        <div className="h-96 relative z-10">
+                            <MapContainer
+                                ref={mapRef}
+                                center={[currentPoint.lat, currentPoint.lng]}
+                                zoom={12}
+                                onMapLoad={(map) => {
+                                    mapRef.current = map;
+                                }}
+                            />
                         </div>
                     </div>
 
-                    {/* UMKM List */}
-                    <div className="bg-white rounded-2xl shadow-sm border p-6">
-                        <h3 className="text-lg font-semibold text-slate-900 mb-4">UMKM Sekitar</h3>
+                    {/* Route Points Navigation */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <h3 className="text-lg font-semibold text-slate-900 mb-4">Titik Perjalanan</h3>
+                        <RoutePointsList
+                            routePoints={routePoints}
+                            currentPointIndex={currentPointIndex}
+                            onPointClick={handlePointClick}
+                        />
+                    </div>
 
-                        {currentPoint?.umkm && currentPoint.umkm.length > 0 ? (
-                            <div className="space-y-3">
-                                {currentPoint.umkm.map((umkm, idx) => (
-                                    <div
-                                        key={idx}
-                                        onClick={() => handleUMKMClick(umkm)}
-                                        className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50 hover:border-emerald-300 transition-all cursor-pointer group"
-                                    >
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h4 className="font-medium text-slate-900 group-hover:text-emerald-700 transition-colors">{umkm.name}</h4>
-                                            <div className="flex items-center text-xs text-yellow-600">
-                                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                                </svg>
-                                                {umkm.rating}
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full group-hover:bg-emerald-200 transition-colors">{umkm.type}</span>
-                                            <span className="text-xs text-slate-500 group-hover:text-slate-600">{umkm.distance}</span>
-                                        </div>
-                                        <div className="mt-2 text-xs text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            Klik untuk melihat detail →
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-8 text-slate-500">
-                                <MapPinIcon className="h-12 w-12 mx-auto mb-3 text-slate-300" />
-                                <p>Tidak ada UMKM di lokasi ini</p>
-                            </div>
+                    {/* Location Details */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        {currentPoint && (
+                            <LocationDetails
+                                name={currentPoint.name}
+                                description={currentPoint.description}
+                                time={currentPoint.time}
+                                attractions={currentPoint.attractions}
+                                getLocationImage={getLocationImage}
+                                getLocationHistory={getLocationHistory}
+                                getLocationActivities={getLocationActivities}
+                            />
                         )}
+                    </div>
+
+                    {/* UMKM Section */}
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-blue-100 overflow-hidden hover:shadow-md transition-all duration-300 hover:border-blue-200">
+                        <UMKMSection umkms={currentPoint?.umkm || []} />
+                    </div>
+
+                    {/* Journey Summary */}
+                    <div className="relative z-10">
+                        <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 border border-blue-100 hover:shadow-md transition-all duration-300">
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100/30 rounded-xl opacity-50 -z-10"></div>
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-slate-900">Ringkasan Perjalanan</h3>
+                                        <p className="text-slate-700 text-sm mt-1">
+                                            Estimasi tiba: {estimatedArrival} • {totalPoints} destinasi
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                                            {Math.round(((currentPointIndex + 1) / totalPoints) * 100)}%
+                                        </div>
+                                        <div className="text-xs text-blue-600 font-medium">Selesai</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* UMKM Detail Modal */}
-            <UMKMModal
-                isOpen={isUMKMModalOpen}
-                onClose={closeUMKMModal}
-                umkm={selectedUMKM}
-            />
+            {/* UMKM Modal is now handled inside UMKMSection */}
         </div>
     );
 }

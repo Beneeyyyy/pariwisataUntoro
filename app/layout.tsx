@@ -28,8 +28,16 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
-      <body className="antialiased">
-        {children}
+      <body className="antialiased bg-gradient-to-br from-blue-50 via-white to-blue-50">
+        <div className="min-h-screen">
+          {/* Background pattern */}
+          <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/light-paper-fibers.png')] opacity-10"></div>
+          
+          {/* Main content */}
+          <div className="relative z-10">
+            {children}
+          </div>
+        </div>
       </body>
     </html>
   );
